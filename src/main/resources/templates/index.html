@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Alpha Trading Terminal</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #080b12;
+            --card-bg: #111827;
+            --accent-primary: #3b82f6;
+            --accent-success: #10b981;
+            --accent-danger: #ef4444;
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            background-image: radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.05) 0%, transparent 40%),
+                              radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.05) 0%, transparent 40%);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding: 1.5rem 2rem;
+            background: var(--glass-bg);
+            backdrop-filter: blur(15px);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .logo {
+            font-size: 2rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+            background: linear-gradient(90deg, #3b82f6, #10b981);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            transition: transform 0.3s;
+        }
+
+        .stat-card:hover { transform: translateY(-5px); }
+        .stat-label { color: var(--text-secondary); font-size: 0.9rem; text-transform: uppercase; margin-bottom: 0.5rem; }
+        .stat-value { font-size: 1.8rem; font-weight: 700; }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+        }
+
+        .market-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .stock-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 1.5rem;
+            border-radius: 20px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .stock-card:hover { border-color: var(--accent-primary); box-shadow: 0 0 20px rgba(59, 130, 246, 0.2); }
+
+        .price-badge {
+            font-size: 0.8rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 100px;
+            float: right;
+        }
+
+        .positive { color: var(--accent-success); background: rgba(16, 185, 129, 0.1); }
+        .negative { color: var(--accent-danger); background: rgba(239, 68, 68, 0.1); }
+
+        .btn {
+            padding: 0.7rem 1.2rem;
+            border-radius: 12px;
+            border: none;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+        }
+
+        .btn-buy { background: var(--accent-primary); color: white; }
+        .btn-buy:hover { filter: brightness(1.2); }
+        .btn-sell { background: rgba(239, 68, 68, 0.1); color: var(--accent-danger); border: 1px solid var(--accent-danger); }
+        .btn-sell:hover { background: var(--accent-danger); color: white; }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 1.5rem;
+        }
+
+        input[type="number"] {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border-color);
+            color: white;
+            padding: 0.5rem;
+            border-radius: 8px;
+            width: 80px;
+            outline: none;
+        }
+
+        .sidebar-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .portfolio-item {
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .portfolio-item:last-child { border-bottom: none; }
+
+        .pl-value { font-size: 0.8rem; font-weight: 600; }
+
+        .history-section {
+            margin-top: 3rem;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 2rem;
+            overflow: hidden;
+        }
+
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; color: var(--text-secondary); padding: 1rem; border-bottom: 1px solid var(--border-color); }
+        td { padding: 1.2rem 1rem; border-bottom: 1px solid var(--border-color); }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            background: var(--accent-primary);
+            color: white;
+            font-weight: 600;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            transform: translateY(100px);
+            transition: transform 0.3s;
+            z-index: 1000;
+        }
+
+        .toast.show { transform: translateY(0); }
+
+        canvas { max-height: 100px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">ALPHA TERMINAL</div>
+            <div style="text-align: right">
+                <span style="color: var(--text-secondary); font-size: 0.8rem;">TRADER: </span>
+                <span th:text="${trader.name}" style="font-weight: 700; color: var(--accent-primary);">Raj Kumar</span>
+            </div>
+        </header>
+
+        <div class="stats-bar">
+            <div class="stat-card">
+                <p class="stat-label">Net Worth</p>
+                <p class="stat-value" id="total-value" th:text="'$' + ${#numbers.formatDecimal(totalValue, 1, 'COMMA', 2, 'POINT')}">$10,000.00</p>
+            </div>
+            <div class="stat-card">
+                <p class="stat-label">Buying Power</p>
+                <p class="stat-value" style="color: var(--accent-success);" th:text="'$' + ${#numbers.formatDecimal(trader.balance, 1, 'COMMA', 2, 'POINT')}">$10,000.00</p>
+            </div>
+            <div class="stat-card">
+                <p class="stat-label">Active Positions</p>
+                <p class="stat-value" th:text="${#lists.size(trader.portfolio)}">0</p>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="market-view">
+                <h2 style="margin-bottom: 1.5rem; color: var(--text-secondary);">Market Assets</h2>
+                <div class="market-list">
+                    <div th:each="stock : ${stocks}" class="stock-card" th:id="'stock-' + ${stock.symbol}">
+                        <span th:class="${stock.priceChange >= 0} ? 'price-badge positive' : 'price-badge negative'" 
+                              th:text="${stock.priceChange >= 0 ? '▲ ' : '▼ '} + ${stock.priceChange} + '%'">▲ 1.2%</span>
+                        <p style="font-weight: 700; font-size: 1.2rem;" th:text="${stock.symbol}">AAPL</p>
+                        <p style="color: var(--text-secondary); font-size: 0.8rem; margin-bottom: 1rem;" th:text="${stock.name}">Apple Inc.</p>
+                        <p class="stock-price" style="font-size: 2rem; font-weight: 800;" th:text="'$' + ${stock.currentPrice}">$150.00</p>
+                        
+                        <canvas th:id="'chart-' + ${stock.symbol}"></canvas>
+
+                        <form th:action="@{/buy}" method="post" class="input-group">
+                            <input type="hidden" name="symbol" th:value="${stock.symbol}">
+                            <input type="number" name="quantity" value="1" min="1" required>
+                            <button type="submit" class="btn btn-buy">BUY</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <h2 style="margin-bottom: 1.5rem; color: var(--text-secondary);">Your Portfolio</h2>
+                <div class="sidebar-card">
+                    <div th:if="${#lists.isEmpty(trader.portfolio)}" style="text-align: center; color: var(--text-secondary); padding: 1rem;">
+                        No assets in portfolio.
+                    </div>
+                    <div th:each="item : ${trader.portfolio}" class="portfolio-item">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span th:text="${item.stock.symbol}" style="font-weight: 700;">AAPL</span>
+                            <span th:text="${item.quantity} + ' Shares'" style="color: var(--text-secondary);">10 Shares</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <p style="font-size: 0.7rem; color: var(--text-secondary);">Avg: <span th:text="'$' + ${item.averagePurchasePrice}">$140.00</span></p>
+                                <p th:class="${item.stock.currentPrice >= item.averagePurchasePrice} ? 'pl-value positive' : 'pl-value negative'"
+                                   th:text="${item.stock.currentPrice >= item.averagePurchasePrice ? '+' : ''} + '$' + ${#numbers.formatDecimal((item.stock.currentPrice - item.averagePurchasePrice) * item.quantity, 1, 'COMMA', 2, 'POINT')}">
+                                   +$100.00
+                                </p>
+                            </div>
+                            <form th:action="@{/sell}" method="post" style="display: flex; gap: 5px;">
+                                <input type="hidden" name="symbol" th:value="${item.stock.symbol}">
+                                <input type="number" name="quantity" th:value="${item.quantity}" th:max="${item.quantity}" min="1" style="width: 45px; padding: 4px;">
+                                <button type="submit" class="btn btn-sell" style="padding: 4px 8px; font-size: 0.7rem;">SELL</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <h2 style="margin-bottom: 1.5rem; color: var(--text-secondary);">Top Performers</h2>
+                <div class="sidebar-card" id="top-movers">
+                    <!-- Dynamic movers go here -->
+                </div>
+            </div>
+        </div>
+
+        <div class="history-section">
+            <h2 style="margin-bottom: 1.5rem; color: var(--text-secondary);">Transaction Log</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Type</th>
+                        <th>Symbol</th>
+                        <th>Quantity</th>
+                        <th>Execution Price</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="tx : ${transactions}">
+                        <td th:text="${#temporals.format(tx.timestamp, 'dd MMM yyyy, HH:mm:ss')}"></td>
+                        <td><span th:class="${tx.type == 'BUY'} ? 'positive' : 'negative'" th:text="${tx.type}" style="font-weight: 700; font-size: 0.8rem; padding: 4px 8px; border-radius: 4px;">BUY</span></td>
+                        <td th:text="${tx.stockSymbol}" style="font-weight: 600;">AAPL</td>
+                        <td th:text="${tx.quantity}">10</td>
+                        <td th:text="'$' + ${tx.priceAtTransaction}">$150.00</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="toast" class="toast">Action completed successfully!</div>
+
+    <script>
+        const charts = {};
+
+        function initChart(symbol) {
+            const ctx = document.getElementById('chart-' + symbol).getContext('2d');
+            charts[symbol] = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['', '', '', '', '', '', '', '', '', ''],
+                    datasets: [{
+                        data: Array(10).fill(0),
+                        borderColor: '#3b82f6',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: 0.4,
+                        fill: true,
+                        backgroundColor: 'rgba(59, 130, 246, 0.05)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { x: { display: false }, y: { display: false } }
+                }
+            });
+        }
+
+        async function updateMarket() {
+            const response = await fetch('/api/stocks');
+            const stocks = await response.json();
+            
+            stocks.forEach(stock => {
+                const card = document.getElementById('stock-' + stock.symbol);
+                if (card) {
+                    const priceEl = card.querySelector('.stock-price');
+                    const badgeEl = card.querySelector('.price-badge');
+                    
+                    priceEl.innerText = '$' + stock.currentPrice.toFixed(2);
+                    badgeEl.innerText = (stock.priceChange >= 0 ? '▲ ' : '▼ ') + stock.priceChange.toFixed(2) + '%';
+                    badgeEl.className = 'price-badge ' + (stock.priceChange >= 0 ? 'positive' : 'negative');
+
+                    // Update Chart
+                    if (!charts[stock.symbol]) initChart(stock.symbol);
+                    const chart = charts[stock.symbol];
+                    chart.data.datasets[0].data.shift();
+                    chart.data.datasets[0].data.push(stock.currentPrice);
+                    chart.data.datasets[0].borderColor = stock.priceChange >= 0 ? '#10b981' : '#ef4444';
+                    chart.update('none');
+                }
+            });
+        }
+
+        // Initialize and Update
+        window.onload = () => {
+            document.querySelectorAll('canvas').forEach(canvas => initChart(canvas.id.split('-')[1]));
+            setInterval(updateMarket, 5000);
+            
+            // Show toast if redirected after post
+            if (window.location.search.includes('success')) {
+                const toast = document.getElementById('toast');
+                toast.classList.add('show');
+                setTimeout(() => toast.classList.remove('show'), 3000);
+            }
+        };
+    </script>
+</body>
+</html>
